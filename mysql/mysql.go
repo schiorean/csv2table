@@ -15,50 +15,34 @@ import (
 
 // DbService represents a service that implements csv2table.DbService for mysql
 type DbService struct {
-	DB *sqlx.DB
+	db     *sqlx.DB             // mysql connection
+	config csv2table.FileConfig // current active csv2table config
 }
 
 // Start initializes the processing of a csv2table.CsvFile
 func (s *DbService) Start(file string, config csv2table.FileConfig) error {
-	var err error
-	s.DB, err = sqlx.Open("mysql", config.Username+":"+config.Password+"@/"+config.Db)
+	s.config = config
+
+	err := s.connect()
 	if err != nil {
 		return err
 	}
 
-	// ping it, to make sure db details are valid
-	err = s.DB.Ping()
-	if err != nil {
-		return err
-	}
-
-	s.initStructure(config)
-
-	return nil
-}
-
-func (s *DbService) initStructure(config csv2table.FileConfig) error {
-	// var cnt int
-	var err = s.DB.QueryRowx("SHOW TABLES LIKE '" + config.Table + "'").Scan()
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-
-	fmt.Println(err)
-
-	// if table doesn't exist => create it
-	if err == sql.ErrNoRows {
+	exists, err := s.tableExists()
+	if !exists {
 
 	}
 
-	// s.DB.Get()
+	fmt.Println(exists)
+
 	return nil
 }
 
 // End finishes the processing of a csv2table.CsvFile
 func (s *DbService) End() {
-	if s.DB != nil {
-		s.DB.Close()
+	if s.db != nil {
+		s.db.Close()
+		s.db = nil
 	}
 }
 
@@ -75,4 +59,32 @@ func (*DbService) ProcessLine([]string) error {
 // NewService creates a new instance of the DbService
 func NewService() (*DbService, error) {
 	return &DbService{}, nil
+}
+
+// connect connects to the database
+func (s *DbService) connect() error {
+	var err error
+	s.db, err = sqlx.Open("mysql", s.config.Username+":"+s.config.Password+"@/"+s.config.Db)
+	if err != nil {
+		return err
+	}
+
+	// ping it, to make sure db details are valid
+	return s.db.Ping()
+}
+
+// tableExists check if a table exists
+func (s *DbService) tableExists() (bool, error) {
+
+	var err = s.db.QueryRowx("SHOW TABLES LIKE '" + s.config.Table + "'").Scan()
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	// if table doesn't exist => create it
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	return true, nil
 }
