@@ -49,9 +49,8 @@ type FileMapping struct {
 
 // DbService is the interface that needs to be implemented by various databases
 type DbService interface {
-	Start(file string, config FileConfig) error
+	Start(config FileConfig, header []string) error
 	End()
-	ProcessHeader(line []string) error
 	ProcessLine(line []string) error
 }
 

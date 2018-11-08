@@ -21,13 +21,16 @@ type DbService struct {
 }
 
 // Start initializes the processing of a csv2table.CsvFile
-func (s *DbService) Start(file string, config csv2table.FileConfig) error {
+func (s *DbService) Start(config csv2table.FileConfig, header []string) error {
 	s.config = config
 
 	err := s.connect()
 	if err != nil {
 		return err
 	}
+
+	// extract columns names from header
+	s.cols = csv2table.SanitizeNames(header)
 
 	// prepare table
 	exists, err := s.tableExists()
@@ -55,11 +58,6 @@ func (s *DbService) End() {
 		s.db.Close()
 		s.db = nil
 	}
-}
-
-// ProcessHeader processes the header of the csv file
-func (s *DbService) ProcessHeader([]string) error {
-	return nil
 }
 
 // ProcessLine processes a line header of the csv file
@@ -111,19 +109,5 @@ func (s *DbService) createTable() error {
 
 	fmt.Println(sql)
 
-	fmt.Println(s.getCols())
-
 	return nil
-}
-
-// getCols returns column names
-// on first call it reads the columns from the header file and caches them
-func (s *DbService) getCols() ([]string, error) {
-	if s.cols != nil {
-		return s.cols, nil
-	}
-
-	// f := os.Open(s.config.)
-
-	return s.cols, nil
 }

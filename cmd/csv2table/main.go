@@ -53,6 +53,8 @@ func Run(directory string) {
 	for _, f := range files {
 		if strings.HasSuffix(strings.ToLower(f.Name()), ".csv") {
 			found = true
+
+			// mysql service, for now
 			service := mysql.NewService()
 
 			err = processCsv(service, f.Name())
@@ -80,17 +82,21 @@ func processCsv(service csv2table.DbService, fileName string) error {
 	}
 	defer f.Close()
 
-	// init db service
-	err = service.Start(fileName, fileConfig)
-	if err != nil {
-		return err
-	}
-	defer service.End()
-
 	r := csv.NewReader(f)
 	r.Comma = ';'
 
-	isFirstLine := true
+	// first line is always the header
+	header, err := r.Read()
+	if err != nil {
+		return err
+	}
+
+	// initialize service
+	err = service.Start(fileConfig, header)
+	if err != nil {
+		return err
+	}
+
 	for {
 		line, err := r.Read()
 		if err == io.EOF {
@@ -98,16 +104,6 @@ func processCsv(service csv2table.DbService, fileName string) error {
 		}
 		if err != nil {
 			return err
-		}
-
-		// 1st line is the header
-		if isFirstLine {
-			isFirstLine = false
-			err = service.ProcessHeader(line)
-			if err != nil {
-				return err
-			}
-			continue
 		}
 
 		// rest of the lines are content
