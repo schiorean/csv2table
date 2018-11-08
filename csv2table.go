@@ -28,7 +28,7 @@ type Config struct {
 	AutoPkDef string // auto incremennt primary key definition
 
 	DefaultColDef  string // default column definintion
-	Drop           string // drop table if already exists?
+	Drop           bool   // drop table if already exists?
 	Truncate       bool   // truncate table before insert?
 	BulkInsertSize int    // how many rows to insert at once
 }

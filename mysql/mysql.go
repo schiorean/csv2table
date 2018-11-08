@@ -17,6 +17,7 @@ import (
 type DbService struct {
 	db     *sqlx.DB             // mysql connection
 	config csv2table.FileConfig // current active csv2table config
+	cols   []string             // column names, not accessible directly, only through getCols() function
 }
 
 // Start initializes the processing of a csv2table.CsvFile
@@ -28,12 +29,22 @@ func (s *DbService) Start(file string, config csv2table.FileConfig) error {
 		return err
 	}
 
+	// prepare table
 	exists, err := s.tableExists()
-	if !exists {
-
+	if exists && s.config.Drop {
+		_, err = s.db.Exec("drop table " + s.config.Table)
+		if err != nil {
+			return err
+		}
+		exists = false
 	}
 
-	fmt.Println(exists)
+	if !exists {
+		err = s.createTable()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -57,8 +68,8 @@ func (*DbService) ProcessLine([]string) error {
 }
 
 // NewService creates a new instance of the DbService
-func NewService() (*DbService, error) {
-	return &DbService{}, nil
+func NewService() *DbService {
+	return &DbService{}
 }
 
 // connect connects to the database
@@ -76,7 +87,7 @@ func (s *DbService) connect() error {
 // tableExists check if a table exists
 func (s *DbService) tableExists() (bool, error) {
 
-	var err = s.db.QueryRowx("SHOW TABLES LIKE '" + s.config.Table + "'").Scan()
+	var err = s.db.QueryRowx(fmt.Sprintf("SHOW TABLES LIKE '%v'", s.config.Table)).Scan()
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
@@ -87,4 +98,32 @@ func (s *DbService) tableExists() (bool, error) {
 	}
 
 	return true, nil
+}
+
+// createTable creates the destination table
+func (s *DbService) createTable() error {
+	sql := fmt.Sprintf("create table `%v` (\n", s.config.Table)
+
+	// add auto-increment PK
+	if s.config.AutoPk {
+		sql += fmt.Sprintf("%v ,\n", s.config.AutoPkDef)
+	}
+
+	fmt.Println(sql)
+
+	fmt.Println(s.getCols())
+
+	return nil
+}
+
+// getCols returns column names
+// on first call it reads the columns from the header file and caches them
+func (s *DbService) getCols() ([]string, error) {
+	if s.cols != nil {
+		return s.cols, nil
+	}
+
+	// f := os.Open(s.config.)
+
+	return s.cols, nil
 }

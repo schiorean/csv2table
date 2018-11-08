@@ -53,11 +53,7 @@ func Run(directory string) {
 	for _, f := range files {
 		if strings.HasSuffix(strings.ToLower(f.Name()), ".csv") {
 			found = true
-			service, err := mysql.NewService()
-			if err != nil {
-				log.Printf("error while processing %s, %v", f.Name(), err)
-				continue
-			}
+			service := mysql.NewService()
 
 			err = processCsv(service, f.Name())
 			if err != nil {
