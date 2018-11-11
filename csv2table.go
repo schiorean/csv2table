@@ -2,15 +2,10 @@
 // while providing different way to convert csv data to match your database definition
 package csv2table
 
-// global Config defaults
+// global Config defaults (mysql compatible)
 const (
-	defaultHost           = "localhost"
-	defaultPort           = 3306
 	defaultDrop           = true
 	defaultTruncate       = false
-	defaultAutoPk         = false
-	defaultAutoPkDef      = "id INT(11) NOT NULL AUTO_INCREMENT"
-	defaultColDef         = "VARCHAR(100) NULL DEFAULT NULL"
 	defaultBulkInsertSize = 5000
 )
 
@@ -24,12 +19,12 @@ type Config struct {
 	Username string // db username
 	Password string // db password
 
-	AutoPk    bool   // use auto increment primary key?
-	AutoPkDef string // auto incremennt primary key definition
+	Drop     bool // drop table if already exists?
+	Truncate bool // truncate table before insert?
 
-	DefaultColDef  string // default column definintion
-	Drop           bool   // drop table if already exists?
-	Truncate       bool   // truncate table before insert?
+	AutoPk         bool   // use auto increment primary key?
+	DefaultColType string // column type definintion
+	TableOptions   string // default table options
 	BulkInsertSize int    // how many rows to insert at once
 }
 
@@ -38,11 +33,11 @@ type Config struct {
 type FileConfig struct {
 	Config
 	Table   string
-	Mapping map[string]FileMapping
+	Mapping map[string]ColumnMapping
 }
 
-// FileMapping holds configuration of a csv column
-type FileMapping struct {
+// ColumnMapping holds configuration of a csv column
+type ColumnMapping struct {
 	Type  string
 	Index bool
 }
@@ -57,11 +52,7 @@ type DbService interface {
 // NewConfig creates a new Config and applies defaults
 func NewConfig() Config {
 	c := Config{
-		Host:           defaultHost,
-		Port:           defaultPort,
-		AutoPk:         defaultAutoPk,
-		AutoPkDef:      defaultAutoPkDef,
-		DefaultColDef:  defaultColDef,
+		Drop:           defaultDrop,
 		Truncate:       defaultTruncate,
 		BulkInsertSize: defaultBulkInsertSize,
 	}

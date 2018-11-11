@@ -4,6 +4,7 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 
@@ -13,11 +14,17 @@ import (
 	"github.com/schiorean/csv2table"
 )
 
+const (
+	autoPkType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
+	autoPkIndex = "PRIMARY KEY(`idauto`)"
+	colIndexTpl = "INDEX `{col}` (`{col}`)"
+)
+
 // DbService represents a service that implements csv2table.DbService for mysql
 type DbService struct {
 	db     *sqlx.DB             // mysql connection
 	config csv2table.FileConfig // current active csv2table config
-	cols   []string             // column names, not accessible directly, only through getCols() function
+	cols   []string             // column names for current file
 }
 
 // Start initializes the processing of a csv2table.CsvFile
@@ -42,6 +49,7 @@ func (s *DbService) Start(config csv2table.FileConfig, header []string) error {
 		exists = false
 	}
 
+	// create table if not exists
 	if !exists {
 		err = s.createTable()
 		if err != nil {
@@ -104,10 +112,47 @@ func (s *DbService) createTable() error {
 
 	// add auto-increment PK
 	if s.config.AutoPk {
-		sql += fmt.Sprintf("%v ,\n", s.config.AutoPkDef)
+		sql += fmt.Sprintf("%v ,\n", autoPkType)
 	}
 
-	fmt.Println(sql)
+	var indexes []string
 
+	// add column definitions
+	for _, col := range s.cols {
+		mapping := s.getColMapping(col)
+		sql += fmt.Sprintf("`%v` %v, \n", col, mapping.Type)
+
+		// build indexes
+		if mapping.Index {
+			indexes = append(indexes, strings.Replace(colIndexTpl, "{col}", col, -1))
+		}
+	}
+
+	// now add indexes
+	if s.config.AutoPk {
+		sql += fmt.Sprintf("%v, \n", autoPkIndex)
+	}
+
+	for _, index := range indexes {
+		sql += fmt.Sprintf("%v, \n", index)
+	}
+
+	// remove last , and close columns definition
+	sql = strings.TrimSuffix(sql, ", \n") + "\n)\n"
+
+	// add table options
+	sql += s.config.TableOptions
+
+	fmt.Println(sql)
 	return nil
+}
+
+// getColMapping creates the sql snippet for a column definition
+func (s *DbService) getColMapping(col string) csv2table.ColumnMapping {
+	mapping, exists := s.config.Mapping[col]
+	if !exists {
+		mapping = csv2table.ColumnMapping{Type: s.config.DefaultColType, Index: false}
+	}
+
+	return mapping
 }
