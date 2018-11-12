@@ -26,6 +26,8 @@ type Config struct {
 	DefaultColType string // column type definintion
 	TableOptions   string // default table options
 	BulkInsertSize int    // how many rows to insert at once
+
+	Verbose bool // whether to log various exection steps
 }
 
 // FileConfig holds configuration associated with a csv file

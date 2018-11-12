@@ -96,6 +96,7 @@ func processCsv(service csv2table.DbService, fileName string) error {
 	if err != nil {
 		return err
 	}
+	defer service.End()
 
 	for {
 		line, err := r.Read()

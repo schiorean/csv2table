@@ -4,6 +4,7 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -41,12 +42,31 @@ func (s *DbService) Start(config csv2table.FileConfig, header []string) error {
 
 	// prepare table
 	exists, err := s.tableExists()
+	if err != nil {
+		return err
+	}
+
 	if exists && s.config.Drop {
+		if s.config.Verbose {
+			log.Printf("Dropping table %v\n", s.config.Table)
+		}
+
 		_, err = s.db.Exec("drop table " + s.config.Table)
 		if err != nil {
 			return err
 		}
+
 		exists = false
+
+	} else if s.config.Truncate {
+		if s.config.Verbose {
+			log.Printf("Truncating table %v\n", s.config.Table)
+		}
+
+		_, err = s.db.Exec("truncate table " + s.config.Table)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create table if not exists
@@ -92,8 +112,8 @@ func (s *DbService) connect() error {
 
 // tableExists check if a table exists
 func (s *DbService) tableExists() (bool, error) {
-
-	var err = s.db.QueryRowx(fmt.Sprintf("SHOW TABLES LIKE '%v'", s.config.Table)).Scan()
+	var exists string
+	var err = s.db.QueryRowx(fmt.Sprintf("SHOW TABLES LIKE '%v'", s.config.Table)).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
@@ -108,6 +128,10 @@ func (s *DbService) tableExists() (bool, error) {
 
 // createTable creates the destination table
 func (s *DbService) createTable() error {
+	if s.config.Verbose {
+		log.Printf("Creating table %v\n", s.config.Table)
+	}
+
 	sql := fmt.Sprintf("create table `%v` (\n", s.config.Table)
 
 	// add auto-increment PK
@@ -143,7 +167,11 @@ func (s *DbService) createTable() error {
 	// add table options
 	sql += s.config.TableOptions
 
-	fmt.Println(sql)
+	_, err := s.db.Exec(sql)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
