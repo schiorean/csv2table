@@ -2,7 +2,7 @@ package csv2table
 
 import "strings"
 
-// dbNameReplacer is a singleton instance of NewReplacer
+// dbNameReplacer is a singleton instance of NewReplacer used to sanitize column names
 var dbNameReplacer *strings.Replacer
 
 // SanitizeName converts a string to a form that can be used as a db name,

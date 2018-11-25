@@ -71,10 +71,24 @@ func Run(directory string) {
 
 // processCsv reads a a csv file and imports it into a database table with similar structure
 func processCsv(service csv2table.DbService, fileName string) error {
+
+	configFile, err := getFileConfig2(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	err = service.Test(configFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	fileConfig, err := getFileConfig(fileName)
+	fmt.Printf("%+v", fileConfig)
 	if err != nil {
 		return err
 	}
+	return nil
 
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -114,7 +128,24 @@ func processCsv(service csv2table.DbService, fileName string) error {
 		}
 	}
 
+	// signal end of csv file
+	err = service.End()
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func getFileConfig2(fileName string) (string, error) {
+	baseName := strings.Replace(fileName, ".csv", "", -1)
+	configFile := baseName + ".toml"
+
+	if _, err := os.Stat(configFile); err != nil {
+		return "", err
+	}
+
+	return configFile, nil
 }
 
 // getFileConfig prepares a FileConfig associated with a csv file.
@@ -125,13 +156,13 @@ func getFileConfig(fileName string) (csv2table.FileConfig, error) {
 	// apply global config
 	fileConfig.Config = c
 
-	// default table name is the base name
 	baseName := strings.Replace(fileName, ".csv", "", -1)
 	fileConfig.Table = csv2table.SanitizeName(baseName)
 
 	// check load a matching config file
 	configFile := baseName + ".toml"
 	if _, err := os.Stat(configFile); err == nil {
+
 		v := viper.New()
 		v.SetConfigFile(configFile)
 

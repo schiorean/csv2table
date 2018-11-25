@@ -1,39 +1,14 @@
-// Package csv2table provides a way to import csv files to corresponding mysql tables
-// while providing different way to convert csv data to match your database definition
+// Package csv2table provides a way to import csv files to corresponding database tables
+// while providing different way to convert csv data to match your database definition.
+//
+// Currently it provides mysql implementation only.
 package csv2table
-
-// global Config defaults (mysql compatible)
-const (
-	defaultDrop           = true
-	defaultTruncate       = false
-	defaultBulkInsertSize = 5000
-)
 
 // Config holds the global app configuration
 // See newConfig() for default values
 type Config struct {
-	Db string
-
-	Host     string // db host
-	Port     int    // db port
-	Username string // db username
-	Password string // db password
-
-	Drop     bool // drop table if already exists?
-	Truncate bool // truncate table before insert?
-
-	AutoPk         bool   // use auto increment primary key?
-	DefaultColType string // column type definintion
-	TableOptions   string // default table options
-	BulkInsertSize int    // how many rows to insert at once
-
 	Verbose bool // whether to log various exection steps
-}
 
-// FileConfig holds configuration associated with a csv file
-// It embeds the global config and can overwrite it if needed
-type FileConfig struct {
-	Config
 	Table   string
 	Mapping map[string]ColumnMapping
 }
@@ -44,20 +19,26 @@ type ColumnMapping struct {
 	Index bool
 }
 
+/**
+TODO:
+	- generic config: the whole config, including csv2table.toml is read by the service
+	- general csv2table.toml must be loaded only once
+	- implement viper logic directly in service implementation and remove it from main
+	- CHECK: is it possible to unmarshall to a not defined struct at compilte time? then we can unmarshall everything in main
+
+*/
+
 // DbService is the interface that needs to be implemented by various databases
 type DbService interface {
-	Start(config FileConfig, header []string) error
-	End()
+	Start(fileName string, header []string) error
+	End() error
 	ProcessLine(line []string) error
+	Test(configFile string) error
 }
 
 // NewConfig creates a new Config and applies defaults
 func NewConfig() Config {
-	c := Config{
-		Drop:           defaultDrop,
-		Truncate:       defaultTruncate,
-		BulkInsertSize: defaultBulkInsertSize,
-	}
+	c := Config{}
 
 	return c
 }
