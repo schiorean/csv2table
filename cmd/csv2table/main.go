@@ -15,11 +15,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	// c is the global config singleton
-	c = csv2table.NewConfig()
-)
-
 // main is the entry routine
 func main() {
 	Run(".")
@@ -27,21 +22,6 @@ func main() {
 
 // Run function is the main routine that starts the csv import process
 func Run(directory string) {
-	// load global config
-	if _, err := os.Stat("csv2table.toml"); err == nil {
-		v := viper.New()
-		v.SetConfigFile("csv2table.toml")
-		err := v.ReadInConfig()
-		if err != nil {
-			log.Fatalf("unable to read global config file, %v", err)
-		}
-
-		err = v.Unmarshal(&c)
-		if err != nil {
-			log.Fatalf("unable to decode global config into struct, %v", err)
-		}
-	}
-
 	// iterate through all files in the directory
 	// and find all csv files that have a matching configuration file (.toml)
 	files, err := ioutil.ReadDir(directory)
@@ -71,11 +51,19 @@ func Run(directory string) {
 
 // processCsv reads a a csv file and imports it into a database table with similar structure
 func processCsv(service csv2table.DbService, fileName string) error {
-	fileConfig, err := getFileConfig(fileName)
+	v, err := getViper(fileName)
 	if err != nil {
 		return err
 	}
 
+	// initialize service
+	err = service.Start(fileName, v)
+	if err != nil {
+		return err
+	}
+	defer service.End()
+
+	// all good, now start csv file processing
 	f, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -90,13 +78,10 @@ func processCsv(service csv2table.DbService, fileName string) error {
 	if err != nil {
 		return err
 	}
-
-	// initialize service
-	err = service.Start(fileConfig, header)
+	err = service.ProcessHeader(header)
 	if err != nil {
 		return err
 	}
-	defer service.End()
 
 	for {
 		line, err := r.Read()
@@ -114,44 +99,50 @@ func processCsv(service csv2table.DbService, fileName string) error {
 		}
 	}
 
+	// signal end of csv file
+	err = service.End()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// getFileConfig prepares a FileConfig associated with a csv file.
-// Defaults to global config, and it may be overridden/extended by a csv file based config
-func getFileConfig(fileName string) (csv2table.FileConfig, error) {
-	fileConfig := csv2table.FileConfig{}
+// getViper initializes a new Viper instance merging the main config with the file based config
+func getViper(fileName string) (*viper.Viper, error) {
+	var v *viper.Viper
 
-	// apply global config
-	fileConfig.Config = c
-
-	// default table name is the base name
-	baseName := strings.Replace(fileName, ".csv", "", -1)
-	fileConfig.Table = csv2table.SanitizeName(baseName)
-
-	// check load a matching config file
-	configFile := baseName + ".toml"
-	if _, err := os.Stat(configFile); err == nil {
-		v := viper.New()
-		v.SetConfigFile(configFile)
+	// try load global config
+	if _, err := os.Stat("csv2table.toml"); err == nil {
+		v = viper.New()
+		v.SetConfigFile("csv2table.toml")
 
 		err := v.ReadInConfig()
 		if err != nil {
-			return csv2table.FileConfig{}, fmt.Errorf("unable to read config file (%s), %v", configFile, err)
-		}
-
-		// unmarshal file based global config. Why the "Config" embeded struct can't be unmarshaled automatically? No clue, so for now do it separately
-		err = v.Unmarshal(&fileConfig.Config)
-		if err != nil {
-			return csv2table.FileConfig{}, fmt.Errorf("unable to decode config file  (%s), %v", configFile, err)
-		}
-
-		// unmarshal main config (table, mapping)
-		err = v.Unmarshal(&fileConfig)
-		if err != nil {
-			return csv2table.FileConfig{}, fmt.Errorf("unable to decode config file (%s), %v", configFile, err)
+			return nil, fmt.Errorf("unable to read global config file, %v", err)
 		}
 	}
 
-	return fileConfig, nil
+	// next, try load file based config file
+	baseName := strings.Replace(fileName, ".csv", "", -1)
+	configFile := baseName + ".toml"
+
+	if _, err := os.Stat(configFile); err == nil {
+		if v == nil {
+			v = viper.New()
+		}
+		v.SetConfigFile(configFile)
+
+		err := v.MergeInConfig()
+		if err != nil {
+			return nil, fmt.Errorf("unable to read config file (%s), %v", configFile, err)
+		}
+	}
+
+	// at least either main or file based configuration must be available
+	if v == nil {
+		return nil, fmt.Errorf("no configuration files found")
+	}
+
+	return v, nil
 }

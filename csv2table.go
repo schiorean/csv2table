@@ -1,63 +1,23 @@
-// Package csv2table provides a way to import csv files to corresponding mysql tables
-// while providing different way to convert csv data to match your database definition
+// Package csv2table provides a way to import csv files to corresponding database tables
+// while providing different way to convert csv data to match your database definition.
+//
+// Currently it provides mysql implementation only.
 package csv2table
 
-// global Config defaults (mysql compatible)
-const (
-	defaultDrop           = true
-	defaultTruncate       = false
-	defaultBulkInsertSize = 5000
-)
+import "github.com/spf13/viper"
 
-// Config holds the global app configuration
-// See newConfig() for default values
-type Config struct {
-	Db string
-
-	Host     string // db host
-	Port     int    // db port
-	Username string // db username
-	Password string // db password
-
-	Drop     bool // drop table if already exists?
-	Truncate bool // truncate table before insert?
-
-	AutoPk         bool   // use auto increment primary key?
-	DefaultColType string // column type definintion
-	TableOptions   string // default table options
-	BulkInsertSize int    // how many rows to insert at once
-
-	Verbose bool // whether to log various exection steps
-}
-
-// FileConfig holds configuration associated with a csv file
-// It embeds the global config and can overwrite it if needed
-type FileConfig struct {
-	Config
-	Table   string
-	Mapping map[string]ColumnMapping
-}
-
-// ColumnMapping holds configuration of a csv column
-type ColumnMapping struct {
-	Type  string
-	Index bool
-}
-
-// DbService is the interface that needs to be implemented by various databases
+// DbService is the interface that needs to be implemented by various databases in order to offer csv2table support
 type DbService interface {
-	Start(config FileConfig, header []string) error
-	End()
+	// Start is the first method called when a new csv file is processed.
+	// The main configuration (csv2table.toml) is merged with file based configuration and passed as the viper.Viper param
+	Start(fileName string, v *viper.Viper) error
+
+	// End is called after the csv file has beed completely processed
+	End() error
+
+	// ProcessHeader is called for the 1st line of the csv file
+	ProcessHeader(header []string) error
+
+	// ProcessLine is called for each subsequent csv line
 	ProcessLine(line []string) error
-}
-
-// NewConfig creates a new Config and applies defaults
-func NewConfig() Config {
-	c := Config{
-		Drop:           defaultDrop,
-		Truncate:       defaultTruncate,
-		BulkInsertSize: defaultBulkInsertSize,
-	}
-
-	return c
 }
