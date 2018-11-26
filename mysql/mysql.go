@@ -56,8 +56,6 @@ const (
 	colIndexTpl = "INDEX `{col}` (`{col}`)"
 )
 
-var sqlEscapeReplacer *strings.Replacer
-
 // DbService represents a service that implements csv2table.DbService for mysql
 type DbService struct {
 	db *sqlx.DB // mysql connection

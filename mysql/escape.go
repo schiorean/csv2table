@@ -4,6 +4,8 @@ package mysql
 
 import "strings"
 
+var sqlEscapeReplacer *strings.Replacer
+
 // escapeString escapes a string by adding backslashes before special
 // characters, and turning others into specific escape sequences, such as
 // turning newlines into \n and null bytes into \0.
