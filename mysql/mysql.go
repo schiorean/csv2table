@@ -149,6 +149,10 @@ func (s *DbService) ProcessHeader(header []string) error {
 	s.cols = csv2table.SanitizeNames(header)
 	s.cols = s.escapeStrings(s.cols)
 
+	// escape all names (columns and table name)
+	s.config.Table = s.escapeString(s.config.Table)
+	s.cols = s.escapeStrings(s.cols)
+
 	// prepare table
 	exists, err := s.tableExists()
 	if err != nil {
@@ -186,6 +190,16 @@ func (s *DbService) ProcessHeader(header []string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// allocate statements slice
+	s.statements = make([]string, 0, s.config.BulkInsertSize)
+
+	// initial row count
+	s.rowCount = 0
+
+	if s.config.Verbose {
+		log.Printf("Starting import\n")
 	}
 
 	return nil
