@@ -42,6 +42,7 @@ type Config struct {
 type ColumnMapping struct {
 	Type  string
 	Index bool
+	Format string
 }
 
 // config default options
@@ -86,7 +87,7 @@ func NewService() *DbService {
 }
 
 // Start initializes the processing of a csv file
-func (s *DbService) Start(fileName string, v *viper.Viper) error {
+func (s *DbService) Start(fileName string, value *viper.Viper) error {
 	s.fileName = fileName
 
 	// read config
@@ -96,8 +97,8 @@ func (s *DbService) Start(fileName string, v *viper.Viper) error {
 	baseName := strings.Replace(fileName, ".csv", "", -1)
 	s.config.Table = csv2table.SanitizeName(baseName)
 
-	if v != nil {
-		v.Unmarshal(&s.config)
+	if value != nil {
+		value.Unmarshal(&s.config)
 	}
 
 	if s.config.Verbose {
@@ -206,15 +207,24 @@ func (s *DbService) ProcessHeader(header []string) error {
 // ProcessLine processes a line header of the csv file
 func (s *DbService) ProcessLine(line []string) error {
 	data := make([]string, 0, len(s.cols))
+	var err error
 
-	for _, v := range line {
-		data = append(data, v)
-		// mapping, exists := s.config.Mapping[colName]
-		// if exists {
-		// 	if len(mapping.Type) > 0 {
-		// 		sqlType = mapping.Type
-		// 	}
-		// }
+	for i, value := range line {
+		
+		col := s.cols[i]
+		mapping, exists := s.config.Mapping[col]
+		if exists {
+			// apply formatting rule
+			if mapping.Format != "" {
+				value, err = formatValue(value, mapping.Format)
+				if (err != nil) {
+					return err
+				}
+			}
+		}
+
+		// add value
+		data = append(data, value)
 	}
 
 	s.statements = append(s.statements, s.getSqlStringForRow(data))
@@ -236,6 +246,7 @@ func (s *DbService) connect() error {
 	if err != nil {
 		return err
 	}
+	
 
 	// ping it, to make sure db details are valid
 	return s.db.Ping()
@@ -319,10 +330,10 @@ func (s *DbService) getColMapping(col string) ColumnMapping {
 
 // getSqlStringForRow creates an sql values string for insert
 func (s *DbService) getSqlStringForRow(data []string) string {
-	for i, v := range data {
+	for i, value := range data {
 		sqlv := "null"
-		if v != "" {
-			sqlv = fmt.Sprintf("'%s'", s.escapeString(v))
+		if value != "" {
+			sqlv = fmt.Sprintf("'%s'", s.escapeString(value))
 		}
 
 		data[i] = sqlv
