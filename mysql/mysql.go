@@ -16,6 +16,29 @@ import (
 	"github.com/schiorean/csv2table"
 )
 
+// config default options
+const (
+	defaultVerbose        = false
+	defaultDrop           = false
+	defaultTruncate       = false
+	defaultBulkInsertSize = 5000
+	defaultColType        = "VARCHAR(100) NULL DEFAULT NULL"
+	defaultTableOptions   = "COLLATE='utf8_general_ci' ENGINE=InnoDB"
+
+	autoPkType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
+	autoPkIndex = "PRIMARY KEY(`idauto`)"
+	colIndexTpl = "INDEX `{col}` (`{col}`)"
+)
+
+// column types as understood by us
+const (
+	typeString   = "string"
+	typeInt      = "int"
+	typeFloat    = "float"
+	typeDate     = "date"
+	typeDateTime = "dateTime"
+)
+
 // Config holds mysql specific configuration
 type Config struct {
 	Db       string
@@ -24,8 +47,9 @@ type Config struct {
 	Username string // db username
 	Password string // db password
 
-	Table   string
-	Mapping map[string]ColumnMapping
+	Table      string                   // table name
+	Mapping    map[string]ColumnMapping // columns mapping
+	ColumnType map[string]string        // kind of columns type as understood by us
 
 	Drop     bool // drop table if already exists?
 	Truncate bool // truncate table before insert?
@@ -40,22 +64,11 @@ type Config struct {
 
 // ColumnMapping holds configuration of a csv column
 type ColumnMapping struct {
-	Type  string
-	Index bool
+	Type   string
+	Index  bool
 	Format string
+	NullIf []string
 }
-
-// config default options
-const (
-	defaultVerbose        = false
-	defaultDrop           = false
-	defaultTruncate       = false
-	defaultBulkInsertSize = 5000
-
-	autoPkType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
-	autoPkIndex = "PRIMARY KEY(`idauto`)"
-	colIndexTpl = "INDEX `{col}` (`{col}`)"
-)
 
 // DbService represents a service that implements csv2table.DbService for mysql
 type DbService struct {
@@ -76,6 +89,8 @@ func newConfig() Config {
 		Drop:           defaultDrop,
 		Truncate:       defaultTruncate,
 		BulkInsertSize: defaultBulkInsertSize,
+		DefaultColType: defaultColType,
+		TableOptions:   defaultTableOptions,
 	}
 
 	return c
@@ -87,7 +102,7 @@ func NewService() *DbService {
 }
 
 // Start initializes the processing of a csv file
-func (s *DbService) Start(fileName string, value *viper.Viper) error {
+func (s *DbService) Start(fileName string, v *viper.Viper) error {
 	s.fileName = fileName
 
 	// read config
@@ -97,8 +112,11 @@ func (s *DbService) Start(fileName string, value *viper.Viper) error {
 	baseName := strings.Replace(fileName, ".csv", "", -1)
 	s.config.Table = csv2table.SanitizeName(baseName)
 
-	if value != nil {
-		value.Unmarshal(&s.config)
+	if v != nil {
+		err := v.Unmarshal(&s.config)
+		if err != nil {
+			return fmt.Errorf("unable to unmarshall loaded configuration, %v", err)
+		}
 	}
 
 	if s.config.Verbose {
@@ -191,6 +209,19 @@ func (s *DbService) ProcessHeader(header []string) error {
 		}
 	}
 
+	// fill configuration with real mysql column type
+	fmt.Printf("%+v\n", s.config.Mapping)
+	fmt.Printf("%+v\n", s.cols)
+
+	for _, col := range s.cols {
+		// TODO: extract dbType
+		mapping, exists := s.config.Mapping[col]
+		fmt.Println(col)
+		if exists {
+			fmt.Println(mapping.Type)
+		}
+	}
+
 	// allocate statements slice
 	s.statements = make([]string, 0, s.config.BulkInsertSize)
 
@@ -207,19 +238,20 @@ func (s *DbService) ProcessHeader(header []string) error {
 // ProcessLine processes a line header of the csv file
 func (s *DbService) ProcessLine(line []string) error {
 	data := make([]string, 0, len(s.cols))
-	var err error
+	// var err error
 
 	for i, value := range line {
-		
+
 		col := s.cols[i]
 		mapping, exists := s.config.Mapping[col]
+		// fmt.Println(mapping)
 		if exists {
 			// apply formatting rule
 			if mapping.Format != "" {
-				value, err = formatValue(value, mapping.Format)
-				if (err != nil) {
-					return err
-				}
+				// value, err = formatValue(value, mapping.Format)
+				// if (err != nil) {
+				// 	return err
+				// }
 			}
 		}
 
@@ -246,7 +278,6 @@ func (s *DbService) connect() error {
 	if err != nil {
 		return err
 	}
-	
 
 	// ping it, to make sure db details are valid
 	return s.db.Ping()
@@ -309,6 +340,8 @@ func (s *DbService) createTable() error {
 	// add table options
 	sql += s.config.TableOptions
 
+	fmt.Println(sql)
+
 	_, err := s.db.Exec(sql)
 	if err != nil {
 		return err
@@ -323,6 +356,11 @@ func (s *DbService) getColMapping(col string) ColumnMapping {
 	mapping, exists := s.config.Mapping[col]
 	if !exists {
 		mapping = ColumnMapping{Type: s.config.DefaultColType, Index: false}
+	}
+
+	// set required default fields if not set
+	if mapping.Type == "" {
+		mapping.Type = s.config.DefaultColType
 	}
 
 	return mapping
@@ -364,5 +402,13 @@ func (s *DbService) insertOutstandingRows() error {
 
 	// empty statements
 	s.statements = s.statements[:0]
+	return nil
+}
+
+// readTableMetadata parse current table metadata
+func (s *DbService) readTableMetadata() error {
+	// todo: read db types
+	// rows, err := s.db.Queryx(fmt.Sprintf("SHOW FULL COLUMNS FROM '%v'", s.config.Table));
+
 	return nil
 }

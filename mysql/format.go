@@ -29,6 +29,10 @@ func parseDateTime(format string, in string) (string, error) {
 // Possible formatting rules:
 // "date:rule" : parse a date/time into a mysql date/time string, 
 // 				 by parsing it according to the layout as defined by time.Parse()
-func formatValue(value string, rule string) (string, error) {
-	return value, nil
-}
+// func formatValue(value string, rule string) (string, error) {
+// 	parts := strings.Split(rule, ":")
+// 	if len(parts) == 0 {
+// 		return ""
+// 	}
+// 	return value, nil
+// }
