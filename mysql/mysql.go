@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -209,17 +210,10 @@ func (s *DbService) ProcessHeader(header []string) error {
 		}
 	}
 
-	// fill configuration with real mysql column type
-	fmt.Printf("%+v\n", s.config.Mapping)
-	fmt.Printf("%+v\n", s.cols)
-
-	for _, col := range s.cols {
-		// TODO: extract dbType
-		mapping, exists := s.config.Mapping[col]
-		fmt.Println(col)
-		if exists {
-			fmt.Println(mapping.Type)
-		}
+	// parse db types => our types
+	err = s.parseAndSetDbTypes()
+	if err != nil {
+		return err
 	}
 
 	// allocate statements slice
@@ -340,30 +334,12 @@ func (s *DbService) createTable() error {
 	// add table options
 	sql += s.config.TableOptions
 
-	fmt.Println(sql)
-
 	_, err := s.db.Exec(sql)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// getColMapping creates the sql snippet for a column definition
-// if not defined, use the default mapping
-func (s *DbService) getColMapping(col string) ColumnMapping {
-	mapping, exists := s.config.Mapping[col]
-	if !exists {
-		mapping = ColumnMapping{Type: s.config.DefaultColType, Index: false}
-	}
-
-	// set required default fields if not set
-	if mapping.Type == "" {
-		mapping.Type = s.config.DefaultColType
-	}
-
-	return mapping
 }
 
 // getSqlStringForRow creates an sql values string for insert
@@ -405,10 +381,46 @@ func (s *DbService) insertOutstandingRows() error {
 	return nil
 }
 
-// readTableMetadata parse current table metadata
-func (s *DbService) readTableMetadata() error {
-	// todo: read db types
-	// rows, err := s.db.Queryx(fmt.Sprintf("SHOW FULL COLUMNS FROM '%v'", s.config.Table));
+// getColMapping creates the sql snippet for a column definition
+// if not defined, use the default mapping
+func (s *DbService) getColMapping(col string) ColumnMapping {
+	mapping, exists := s.config.Mapping[col]
+	if !exists {
+		mapping = ColumnMapping{Type: s.config.DefaultColType, Index: false}
+	}
+
+	// set required default fields if not set
+	if mapping.Type == "" {
+		mapping.Type = s.config.DefaultColType
+	}
+
+	return mapping
+}
+
+// parseAndSetDbTypes parses current table metadata and update Config.ColumnType with equivalent types understood by us
+func (s *DbService) parseAndSetDbTypes() error {
+	s.config.ColumnType = make(map[string]string)
+
+	rInt := regexp.MustCompile("(?i)int|unsigned|bit|tinyint|smallint|mediumint")
+	rFloat := regexp.MustCompile("(?i)float|double")
+	rDate := regexp.MustCompile("(?i)date")
+	rDateTime := regexp.MustCompile("(?i)datetime|timestamp")
+
+	for _, col := range s.cols {
+		mapping := s.getColMapping(col)
+
+		if rInt.MatchString(mapping.Type) {
+			s.config.ColumnType[col] = typeInt
+		} else if rFloat.MatchString(mapping.Type) {
+			s.config.ColumnType[col] = typeFloat
+		} else if rDateTime.MatchString(mapping.Type) {
+			s.config.ColumnType[col] = typeDateTime
+		} else if rDate.MatchString(mapping.Type) {
+			s.config.ColumnType[col] = typeDate
+		} else {
+			s.config.ColumnType[col] = typeString // default
+		}
+	}
 
 	return nil
 }
