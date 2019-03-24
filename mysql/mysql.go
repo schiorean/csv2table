@@ -130,7 +130,7 @@ func (s *DbService) Start(fileName string, v *viper.Viper) error {
 	}
 
 	// escape all names (columns and table name)
-	s.config.Table = s.escapeString(s.config.Table)
+	s.config.Table = escapeString(s.config.Table)
 
 	// allocate statements slice
 	s.statements = make([]string, 0, s.config.BulkInsertSize)
@@ -165,11 +165,11 @@ func (s *DbService) End() error {
 func (s *DbService) ProcessHeader(header []string) error {
 	// extract columns names from header
 	s.cols = csv2table.SanitizeNames(header)
-	s.cols = s.escapeStrings(s.cols)
+	s.cols = escapeStrings(s.cols)
 
 	// escape all names (columns and table name)
-	s.config.Table = s.escapeString(s.config.Table)
-	s.cols = s.escapeStrings(s.cols)
+	s.config.Table = escapeString(s.config.Table)
+	s.cols = escapeStrings(s.cols)
 
 	// prepare table
 	exists, err := s.tableExists()
@@ -231,32 +231,43 @@ func (s *DbService) ProcessHeader(header []string) error {
 
 // ProcessLine processes a line header of the csv file
 func (s *DbService) ProcessLine(line []string) error {
-	data := make([]string, 0, len(s.cols))
-	// var err error
+	var err error
+
+	// final column values slice
+	// use pointer in order to use nil  to describe mysql NULL
+	data := make([]*string, 0, len(s.cols))
 
 	for i, value := range line {
+		mysqlValue := new(string)
+		*mysqlValue = value
 
 		col := s.cols[i]
 		mapping, exists := s.config.Mapping[col]
-		// fmt.Println(mapping)
 		if exists {
-			// apply formatting rule
-			if mapping.Format != "" {
-				// value, err = formatValue(value, mapping.Format)
-				// if (err != nil) {
-				// 	return err
-				// }
+			// set column as mysql NULL
+			if len(mapping.NullIf) > 0 {
+				if applyNull(mapping.NullIf, value) {
+					mysqlValue = nil
+				}
 			}
+
+			// apply value formatting
+			if mysqlValue != nil && mapping.Format != "" {
+				*mysqlValue, err = formatColumn(s.config.ColumnType[col], mapping.Format, *mysqlValue)
+				if err != nil {
+					return err
+				}
+			}
+
 		}
 
 		// add value
-		data = append(data, value)
+		data = append(data, mysqlValue)
 	}
 
 	s.statements = append(s.statements, s.getSqlStringForRow(data))
-
 	if len(s.statements) == s.config.BulkInsertSize {
-		err := s.insertOutstandingRows()
+		err = s.insertOutstandingRows()
 		if err != nil {
 			return err
 		}
@@ -343,17 +354,19 @@ func (s *DbService) createTable() error {
 }
 
 // getSqlStringForRow creates an sql values string for insert
-func (s *DbService) getSqlStringForRow(data []string) string {
+func (s *DbService) getSqlStringForRow(data []*string) string {
+	mysqlData := make([]string, len(data))
+
 	for i, value := range data {
-		sqlv := "null"
-		if value != "" {
-			sqlv = fmt.Sprintf("'%s'", s.escapeString(value))
+		sqlv := "NULL"
+		if value != nil {
+			sqlv = fmt.Sprintf("'%s'", escapeString(*value))
 		}
 
-		data[i] = sqlv
+		mysqlData[i] = sqlv
 	}
 
-	return "(" + strings.Join(data, ",") + ")\n"
+	return "(" + strings.Join(mysqlData, ",") + ")\n"
 }
 
 // insertOutstandingRows inserts to db all collected rows up to this point
