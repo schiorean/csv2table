@@ -23,7 +23,7 @@ const (
 	defaultDrop           = false
 	defaultTruncate       = false
 	defaultBulkInsertSize = 5000
-	defaultColType        = "VARCHAR(100) NULL DEFAULT NULL"
+	defaultColType        = "VARCHAR(255) NULL DEFAULT NULL"
 	defaultTableOptions   = "COLLATE='utf8_general_ci' ENGINE=InnoDB"
 
 	autoPkType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
