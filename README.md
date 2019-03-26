@@ -1,6 +1,6 @@
 # csv2table
 
-A flexible command line tool to automate parsing of CSV files and importing them into database tables.
+A flexible command line tool to automate parsing and importing of CSV files into database tables.
 
 ## Use case 
 
@@ -15,7 +15,6 @@ There may be several columns that need parsing, for example column `created_at` 
 All configuration is manually defined in `toml` files. There are 2 types 
 
 ## TODO
----
 
 1. Testing
 1. Numeric column formatting
