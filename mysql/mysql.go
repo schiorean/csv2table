@@ -65,10 +65,11 @@ type Config struct {
 
 // ColumnMapping holds configuration of a csv column
 type ColumnMapping struct {
-	Type   string
-	Index  bool
-	Format string
-	NullIf []string
+	Type        string
+	Index       bool
+	Format      string
+	NullIf      []string
+	NullIfEmpty bool
 }
 
 // DbService represents a service that implements csv2table.DbService for mysql
@@ -238,27 +239,10 @@ func (s *DbService) ProcessLine(line []string) error {
 	data := make([]*string, 0, len(s.cols))
 
 	for i, value := range line {
-		mysqlValue := new(string)
-		*mysqlValue = value
-
 		col := s.cols[i]
-		mapping, exists := s.config.Mapping[col]
-		if exists {
-			// set column as mysql NULL
-			if len(mapping.NullIf) > 0 {
-				if applyNull(mapping.NullIf, value) {
-					mysqlValue = nil
-				}
-			}
-
-			// apply value formatting
-			if mysqlValue != nil && mapping.Format != "" {
-				*mysqlValue, err = formatColumn(s.config.ColumnType[col], mapping.Format, *mysqlValue)
-				if err != nil {
-					return err
-				}
-			}
-
+		mysqlValue, err := s.formatColumn(col, value)
+		if err != nil {
+			return err
 		}
 
 		// add value

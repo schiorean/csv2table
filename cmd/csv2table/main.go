@@ -45,7 +45,7 @@ func Run(directory string) {
 	}
 
 	if !found {
-		fmt.Println("no files found")
+		log.Println("no files found")
 	}
 }
 
