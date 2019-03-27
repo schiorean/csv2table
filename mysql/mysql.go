@@ -19,6 +19,8 @@ import (
 
 // config default options
 const (
+	defaultPort = 3306
+
 	defaultVerbose        = false
 	defaultDrop           = false
 	defaultTruncate       = false
@@ -87,6 +89,7 @@ type DbService struct {
 // newConfig creates a new Config and applies defaults
 func newConfig() Config {
 	c := Config{
+		Port:           defaultPort,
 		Verbose:        defaultVerbose,
 		Drop:           defaultDrop,
 		Truncate:       defaultTruncate,
