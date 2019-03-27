@@ -1,14 +1,17 @@
 # csv2table
 
-A flexible command line tool to automate parsing and importing of CSV files into database tables. At the moment only MySQL is supported. 
+A flexible command line tool to automate parsing and importing of CSV files into database tables. 
+
+Currently the only database supported is MySQL.
 
 ## Use case 
 
 Every night you have to fetch a set of CSV files from a remote SFTP server and import each file into a local mysql table. If the destination table doesn't exist, automatically create it.
 
-There may be several columns that need parsing special, for example column `expire_date` needs to be parsed like this:
-1. normal values are formatted as `dd.mm.yyyy`
-1. there is a special value that signifies that there's no upper limit in time, this value is sent as `31.12.2099`. This value you need to save it as a mysql `NULL` value.
+There may be several columns that require special parsing:
+* `expire_date`: normal values are sent as `dd.mm.yyyy`, but there is a special value that signifies that there's no upper limit in time, `31.12.2099`. This value must be saved as a database `NULL` value
+* `amount`: convert from a specific locale (e.g. `12,5`) to the database locale (e.g. `12.5`)
+* `start_date`: a more complex example, this column can have 2 types of values: 1) `dd.mm.yyyy` specifying an exact date or 2) an integer `n` meaning the number of months from January 1st of current year. In the later case we must calculate the the exact date and save it in database 
 
 ## Documentation
 
