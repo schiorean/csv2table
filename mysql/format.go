@@ -85,3 +85,10 @@ func applyNull(nullIf []string, value string) bool {
 
 	return false
 }
+
+// parseFloat parses a float column from an unknown locale to system locale.
+// The algorithtm is simple: the first non-numeric character in format string is considered the decimal point
+func parseFloat(format string, value string) (string, error) {
+	// todo
+	return "", nil
+}
