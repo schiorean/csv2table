@@ -1,6 +1,13 @@
 package mysql
 
-import "time"
+import (
+	"regexp"
+	"strings"
+	"time"
+)
+
+// global list of prepared float parsers found in configuration files
+var floatParsers map[string]*strings.Replacer
 
 // formatColumn formats a column value based on various mapping flags
 func (s *DbService) formatColumn(col string, value string) (*string, error) {
@@ -69,6 +76,8 @@ func parseColumn(columnType string, format string, value string) (string, error)
 		ret, err = parseDate(format, value)
 	case typeDateTime:
 		ret, err = parseDateTime(format, value)
+	case typeFloat:
+		ret = parseFloat(format, value)
 	}
 
 	return ret, err
@@ -87,8 +96,36 @@ func applyNull(nullIf []string, value string) bool {
 }
 
 // parseFloat parses a float column from an unknown locale to system locale.
-// The algorithtm is simple: the first non-numeric character in format string is considered the decimal point
-func parseFloat(format string, value string) (string, error) {
-	// todo
-	return "", nil
+// The algorithtm is simple: the last non-numeric character in format string is considered the decimal point
+func parseFloat(format string, value string) string {
+	parser, exists := floatParsers[format]
+	if !exists {
+		// find kast non-numeric character => decimal point
+		re := regexp.MustCompile("[^0-9]")
+		match := re.FindAllString(format, -1)
+
+		if len(match) == 0 {
+			return value
+		}
+
+		// decimal point is the last element
+		dp := match[len(match)-1]
+		if dp == "," {
+			parser = strings.NewReplacer(
+				".", "",
+				",", ".",
+			)
+		} else {
+			parser = strings.NewReplacer(
+				",", "",
+			)
+		}
+
+		if floatParsers == nil {
+			floatParsers = make(map[string]*strings.Replacer)
+		}
+		floatParsers[format] = parser
+	}
+
+	return parser.Replace(value)
 }
