@@ -48,6 +48,7 @@ func TestParseFloat(t *testing.T) {
 	assert.Equal(t, parseFloat("1.2", "1,500.50"), "1500.50")
 	assert.Equal(t, parseFloat("1,2", "1500,50"), "1500.50")
 
-	//todo
-	// default float format must be 1,2
+	// default format is EN-US
+	assert.Equal(t, parseFloat("", "1500,50"), "150050")
+	assert.Equal(t, parseFloat("", "1500.50"), "1500.50")
 }

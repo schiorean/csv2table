@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+const (
+	defaultFloatFormat = "1.2" // EN-US, the decimal point is the dot "."
+)
+
 // global list of prepared float parsers found in configuration files
 var floatParsers map[string]*strings.Replacer
 
@@ -34,53 +38,14 @@ func (s *DbService) formatColumn(col string, value string) (*string, error) {
 	}
 
 	// format: apply value formatting
-	if mysqlValue != nil && mapping.Format != "" {
-		*mysqlValue, err = parseColumn(s.config.ColumnType[col], mapping.Format, *mysqlValue)
+	if mysqlValue != nil {
+		*mysqlValue, err = parseType(s.config.ColumnType[col], mapping.Format, *mysqlValue)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return mysqlValue, nil
-}
-
-// parseDate parses a date string using time.Parse(),
-// and returns it as a mysql valid date string
-func parseDate(format string, value string) (string, error) {
-	t, err := time.Parse(format, value)
-	if err != nil {
-		return "", err
-	}
-
-	return t.Format("2006-01-02"), nil
-}
-
-// parseDateTime parses a datetime string using time.Parse(),
-// and returns it as a mysql valid datetime string
-func parseDateTime(format string, value string) (string, error) {
-	t, err := time.Parse(format, value)
-	if err != nil {
-		return "", err
-	}
-
-	return t.Format("2006-01-02 15:04:05"), nil
-}
-
-// parseColumn parses a column value based on the column type and provided format
-func parseColumn(columnType string, format string, value string) (string, error) {
-	var ret string
-	var err error
-
-	switch columnType {
-	case typeDate:
-		ret, err = parseDate(format, value)
-	case typeDateTime:
-		ret, err = parseDateTime(format, value)
-	case typeFloat:
-		ret = parseFloat(format, value)
-	}
-
-	return ret, err
 }
 
 // applyNull sets a column value to mysql NULL if the raw value matches a value from the nullIf slice
@@ -95,9 +60,57 @@ func applyNull(nullIf []string, value string) bool {
 	return false
 }
 
+// parseDate parses a date string using time.Parse(),
+// and returns it as a mysql valid date string
+func parseDate(format string, value string) (string, error) {
+	if format == "" {
+		return value, nil
+	}
+
+	t, err := time.Parse(format, value)
+	if err != nil {
+		return "", err
+	}
+
+	return t.Format("2006-01-02"), nil
+}
+
+// parseDateTime parses a datetime string using time.Parse(),
+// and returns it as a mysql valid datetime string
+func parseDateTime(format string, value string) (string, error) {
+	if format == "" {
+		return value, nil
+	}
+
+	t, err := time.Parse(format, value)
+	if err != nil {
+		return "", err
+	}
+
+	return t.Format("2006-01-02 15:04:05"), nil
+}
+
+// parseType parses a column value based on the column type and provided format
+func parseType(columnType string, format string, value string) (string, error) {
+	switch columnType {
+	case typeDate:
+		return parseDate(format, value)
+	case typeDateTime:
+		return parseDateTime(format, value)
+	case typeFloat:
+		return parseFloat(format, value), nil
+	}
+
+	return value, nil
+}
+
 // parseFloat parses a float column from an unknown locale to system locale.
 // The algorithtm is simple: the last non-numeric character in format string is considered the decimal point
 func parseFloat(format string, value string) string {
+	if format == "" {
+		format = defaultFloatFormat
+	}
+
 	parser, exists := floatParsers[format]
 	if !exists {
 		// find kast non-numeric character => decimal point

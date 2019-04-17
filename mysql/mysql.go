@@ -28,9 +28,9 @@ const (
 	defaultColType        = "VARCHAR(255) NULL DEFAULT NULL"
 	defaultTableOptions   = "COLLATE='utf8_general_ci' ENGINE=InnoDB"
 
-	autoPkType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
-	autoPkIndex = "PRIMARY KEY(`idauto`)"
-	colIndexTpl = "INDEX `{col}` (`{col}`)"
+	autoPkColType  = "`id` INT(11) NOT NULL AUTO_INCREMENT"
+	autoPkColIndex = "PRIMARY KEY(`id`)"
+	colIndexTpl    = "INDEX `{col}` (`{col}`)"
 )
 
 // column types as understood by us
@@ -171,18 +171,14 @@ func (s *DbService) ProcessHeader(header []string) error {
 	s.cols = csv2table.SanitizeNames(header)
 	s.cols = escapeStrings(s.cols)
 
-	// escape all names (columns and table name)
-	s.config.Table = escapeString(s.config.Table)
-	s.cols = escapeStrings(s.cols)
-
 	// prepare table
 	exists, err := s.tableExists()
 	if err != nil {
 		return err
 	}
 
+	// DROP table
 	if exists && s.config.Drop {
-		// DROP table
 		if s.config.Verbose {
 			log.Printf("Dropping table %v\n", s.config.Table)
 		}
@@ -194,8 +190,10 @@ func (s *DbService) ProcessHeader(header []string) error {
 
 		exists = false
 
-	} else if s.config.Truncate {
-		// TRUNCATE table
+	}
+
+	// TRUNCATE table
+	if exists && s.config.Truncate {
 		if s.config.Verbose {
 			log.Printf("Truncating table %v\n", s.config.Table)
 		}
@@ -206,7 +204,7 @@ func (s *DbService) ProcessHeader(header []string) error {
 		}
 	}
 
-	// create table if not exists
+	// CREATE table if not exists
 	if !exists {
 		err = s.createTable()
 		if err != nil {
@@ -301,7 +299,7 @@ func (s *DbService) createTable() error {
 
 	// add auto-increment PK
 	if s.config.AutoPk {
-		sql += fmt.Sprintf("%v ,\n", autoPkType)
+		sql += fmt.Sprintf("%v ,\n", autoPkColType)
 	}
 
 	var indexes []string
@@ -319,7 +317,7 @@ func (s *DbService) createTable() error {
 
 	// now add indexes
 	if s.config.AutoPk {
-		sql += fmt.Sprintf("%v, \n", autoPkIndex)
+		sql += fmt.Sprintf("%v, \n", autoPkColIndex)
 	}
 
 	for _, index := range indexes {

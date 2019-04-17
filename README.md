@@ -34,17 +34,10 @@ Each file is importing according to the configuration. First it is loaded the gl
 
 ## TODO
 
-1. Testing
-1. Numeric column formatting
+1. Auto PK custom name and definition
+1. Email notifications
+1. Tengo parsing
 
-### Import parsing
+## Planned features 
 
-Candidates
-1. tengo https://github.com/d5/tengo --- most promising
-1. lua https://github.com/yuin/gopher-lua
-1. starlark https://github.com/google/starlark-go
-
-## Notifications
-
-1. Email notifications when import is done, or failed
-1. slack?
+1. slack notifications?
