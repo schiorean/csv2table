@@ -4,7 +4,11 @@
 // Currently it provides mysql implementation only.
 package csv2table
 
-import "github.com/spf13/viper"
+import (
+	"fmt"
+
+	"github.com/spf13/viper"
+)
 
 // DbService is the interface that needs to be implemented by various databases in order to offer csv2table support
 type DbService interface {
@@ -20,4 +24,23 @@ type DbService interface {
 
 	// ProcessLine is called for each subsequent csv line
 	ProcessLine(line []string) error
+}
+
+// ImportFileStatus holds each imported file status
+type ImportFileStatus map[string]error
+
+// UnmarshallConfig reads generic (non db provider) configuration
+func UnmarshallConfig(v *viper.Viper) error {
+	// email configuration
+	err := v.UnmarshalKey("email", &emailConfig)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshall loaded configuration email, %v", err)
+	}
+
+	return nil
+}
+
+// AfterImport is called after all files were processed
+func AfterImport(status ImportFileStatus) {
+	fmt.Println("status...")
 }

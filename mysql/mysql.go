@@ -24,12 +24,12 @@ const (
 	defaultVerbose        = false
 	defaultDrop           = false
 	defaultTruncate       = false
-	defaultBulkInsertSize = 5000
+	defaultBulkInsertSize = 10000
 	defaultColType        = "VARCHAR(255) NULL DEFAULT NULL"
 	defaultTableOptions   = "COLLATE='utf8_general_ci' ENGINE=InnoDB"
 
-	autoPkColType  = "`id` INT(11) NOT NULL AUTO_INCREMENT"
-	autoPkColIndex = "PRIMARY KEY(`id`)"
+	autoPkColType  = "`idauto` INT(11) NOT NULL AUTO_INCREMENT"
+	autoPkColIndex = "PRIMARY KEY(`idauto`)"
 	colIndexTpl    = "INDEX `{col}` (`{col}`)"
 )
 
@@ -56,13 +56,15 @@ type Config struct {
 
 	Drop     bool // drop table if already exists?
 	Truncate bool // truncate table before insert?
+	AutoPk   bool // use auto increment primary key?
 
-	AutoPk         bool   // use auto increment primary key?
 	DefaultColType string // column type definintion
 	TableOptions   string // default table options
 	BulkInsertSize int    // how many rows to insert at once
 
 	Verbose bool // whether to log various exection steps
+
+	Email csv2table.Email
 }
 
 // ColumnMapping holds configuration of a csv column

@@ -29,6 +29,9 @@ func Run(directory string) {
 		log.Fatal(err)
 	}
 
+	// errors list collected from each processed file
+	status := csv2table.ImportFileStatus{}
+
 	found := false
 	for _, f := range files {
 		if strings.HasSuffix(strings.ToLower(f.Name()), ".csv") {
@@ -41,12 +44,16 @@ func Run(directory string) {
 			if err != nil {
 				log.Printf("error while processing %s, %v", f.Name(), err)
 			}
+
+			status[f.Name()] = err
 		}
 	}
 
 	if !found {
 		log.Println("no files found")
 	}
+
+	csv2table.AfterImport(status)
 }
 
 // processCsv reads a a csv file and imports it into a database table with similar structure
@@ -54,6 +61,14 @@ func processCsv(service csv2table.DbService, fileName string) error {
 	v, err := getViper(fileName)
 	if err != nil {
 		return err
+	}
+
+	// unmarshall generic (non db provider)  configuration
+	if v != nil {
+		err := csv2table.UnmarshallConfig(v)
+		if err != nil {
+			return err
+		}
 	}
 
 	// initialize service

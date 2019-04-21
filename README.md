@@ -34,7 +34,6 @@ Each file is importing according to the configuration. First it is loaded the gl
 
 ## TODO
 
-1. Auto PK custom name and definition
 1. Email notifications
 1. Tengo parsing
 
