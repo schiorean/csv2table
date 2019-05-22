@@ -26,8 +26,12 @@ type DbService interface {
 	ProcessLine(line []string) error
 }
 
-// ImportFileStatus holds each imported file status
-type ImportFileStatus map[string]error
+// ImportFileStatus holds import status for each imported file
+type ImportFileStatus struct {
+	FileName string // processed filename
+	Error    error  // error or nil if success
+	RowCount int    // processed rows
+}
 
 // UnmarshallConfig reads generic (non db provider) configuration
 func UnmarshallConfig(v *viper.Viper) error {
@@ -41,6 +45,31 @@ func UnmarshallConfig(v *viper.Viper) error {
 }
 
 // AfterImport is called after all files were processed
-func AfterImport(status ImportFileStatus) {
-	fmt.Println("status...")
+func AfterImport(statuses []ImportFileStatus) error {
+	errors := false
+	var status ImportFileStatus
+
+	for _, status = range statuses {
+		if status.Error != nil {
+			errors = true
+			break
+		}
+	}
+
+	// if email is not configured there's nothing else to do
+	if !emailConfigured() {
+		return nil
+	}
+
+	if !errors {
+		if emailConfig.SendOnSuccess {
+			sendEmailSuccess(statuses)
+		}
+	} else {
+		if emailConfig.SendOnError {
+			sendEmailError(statuses)
+		}
+	}
+
+	return nil
 }

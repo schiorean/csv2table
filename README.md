@@ -35,8 +35,9 @@ Each file is importing according to the configuration. First it is loaded the gl
 ## TODO
 
 1. Email notifications
-1. Tengo parsing
+1. Earlier notifications to catch errors before file processing starts
 
 ## Planned features 
 
+1. Tengo parsing
 1. slack notifications?
