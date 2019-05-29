@@ -22,6 +22,8 @@ func main() {
 
 // Run function is the main routine that starts the csv import process
 func Run(directory string) {
+	var err error
+
 	// iterate through all files in the directory
 	// and find all csv files that have a matching configuration file (.toml)
 	files, err := ioutil.ReadDir(directory)
@@ -37,12 +39,17 @@ func Run(directory string) {
 		if strings.HasSuffix(strings.ToLower(f.Name()), ".csv") {
 			found = true
 
+			// in order for a file to be processed it must have a matching configuration file
+			if !hasConfigFile(f.Name()) {
+				continue
+			}
+
 			// mysql service, for now
 			service := mysql.NewService()
 
 			rowCount, err := processCsv(service, f.Name())
 			if err != nil {
-				log.Printf("error while processing %s, %v", f.Name(), err)
+				log.Fatalf("error while processing %s, %v", f.Name(), err)
 			}
 
 			// add import status
@@ -60,13 +67,13 @@ func Run(directory string) {
 
 	err = csv2table.AfterImport(statuses)
 	if err != nil {
-		log.Printf("error while running after import routine, %v", err)
+		log.Fatalf("error while running after import routine, %v", err)
 	}
 }
 
 // processCsv reads a a csv file and imports it into a database table with similar structure
 func processCsv(service csv2table.DbService, fileName string) (int, error) {
-	v, err := getViper(fileName)
+	v, err := getFileViper(fileName)
 	if err != nil {
 		return 0, err
 	}
@@ -134,8 +141,8 @@ func processCsv(service csv2table.DbService, fileName string) (int, error) {
 	return rowCount, nil
 }
 
-// getViper initializes a new Viper instance merging the main config with the file based config
-func getViper(fileName string) (*viper.Viper, error) {
+// getGlobalViper reads global viper configuration from csv2table.toml
+func getGlobalViper() (*viper.Viper, error) {
 	var v *viper.Viper
 
 	// try load global config
@@ -149,26 +156,46 @@ func getViper(fileName string) (*viper.Viper, error) {
 		}
 	}
 
-	// next, try load file based config file
-	baseName := strings.Replace(fileName, ".csv", "", -1)
-	configFile := baseName + ".toml"
+	return v, nil
+}
 
-	if _, err := os.Stat(configFile); err == nil {
-		if v == nil {
-			v = viper.New()
-		}
-		v.SetConfigFile(configFile)
+// getFileViper initializes a new Viper instance merging the main config with the file based config
+func getFileViper(fileName string) (*viper.Viper, error) {
+	var v *viper.Viper
+	var err error
 
-		err := v.MergeInConfig()
-		if err != nil {
-			return nil, fmt.Errorf("unable to read config file (%s), %v", configFile, err)
-		}
+	// try load global config
+	v, err = getGlobalViper()
+	if err != nil {
+		return nil, err
 	}
 
-	// at least either main or file based configuration must be available
+	if !hasConfigFile(fileName) {
+		return nil, nil
+	}
+
 	if v == nil {
-		return nil, fmt.Errorf("no configuration files found")
+		v = viper.New()
+	}
+
+	configFile := getConfigFileName(fileName)
+	v.SetConfigFile(configFile)
+
+	err = v.MergeInConfig()
+	if err != nil {
+		return nil, fmt.Errorf("unable to read config file (%s), %v", configFile, err)
 	}
 
 	return v, nil
+}
+
+// getConfigFileName returns the matching config file name of a csv
+func getConfigFileName(fileName string) string {
+	return strings.Replace(fileName, ".csv", "", -1) + ".toml"
+}
+
+// hasConfigFile checks wether a csv file has an matching configuration file
+func hasConfigFile(fileName string) bool {
+	_, err := os.Stat(getConfigFileName(fileName))
+	return err == nil
 }

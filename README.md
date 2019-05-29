@@ -23,7 +23,7 @@ All configuration is manually defined in [`toml`](https://github.com/toml-lang/t
 
 Each file is importing according to the configuration. First it is loaded the global configuration from `csv2table.toml` file, then the csv specific configuration is merged into the configuration. 
 
-### Configuration options for MySQL
+### Configuration options 
 
 | Option | Description | Default value|
 |---|---|---|

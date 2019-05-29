@@ -61,15 +61,17 @@ func AfterImport(statuses []ImportFileStatus) error {
 		return nil
 	}
 
+	var err error
+
 	if !errors {
 		if emailConfig.SendOnSuccess {
-			sendEmailSuccess(statuses)
+			err = sendEmailSuccess(statuses)
 		}
 	} else {
 		if emailConfig.SendOnError {
-			sendEmailError(statuses)
+			err = sendEmailError(statuses)
 		}
 	}
 
-	return nil
+	return err
 }

@@ -60,7 +60,12 @@ const (
 	defaultSuccessBody = `
 Hello,<br/><br/>
 
-Successfully imported {{.SuccessCount}} file(s).<br/>
+{{if .SuccessCount}}
+	Successfully imported {{.SuccessCount}} file(s).<br/>
+{{end}}	
+{{if .ErrorCount}}
+	<span style="color:red">{{.ErrorCount}} file(s) produced errors.</span><br/>
+{{end}}	
 
 <ol>
 {{range .Files}}

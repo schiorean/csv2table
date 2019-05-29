@@ -223,9 +223,6 @@ func (s *DbService) ProcessHeader(header []string) error {
 	// allocate statements slice
 	s.statements = make([]string, 0, s.config.BulkInsertSize)
 
-	// initial row count
-	s.rowCount = 0
-
 	if s.config.Verbose {
 		log.Printf("Starting import\n")
 	}
@@ -362,18 +359,18 @@ func (s *DbService) insertOutstandingRows() error {
 		return nil
 	}
 
-	if s.config.Verbose {
-		log.Printf("Insert %v rows\n", len(s.statements))
-	}
-
 	cols := strings.Join(s.cols, ",")
 	data := strings.Join(s.statements, ",")
 
 	sql := fmt.Sprintf("insert into `%v` (%v) values\n %v", s.config.Table, cols, data)
-
 	_, err := s.db.Exec(sql)
 	if err != nil {
 		return err
+	}
+
+	s.rowCount += len(s.statements)
+	if s.config.Verbose {
+		log.Printf("Inserted %v rows\n", s.rowCount)
 	}
 
 	// empty statements
