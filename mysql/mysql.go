@@ -52,7 +52,7 @@ type Config struct {
 
 	Table      string                   // table name
 	Mapping    map[string]ColumnMapping // columns mapping
-	ColumnType map[string]string        // kind of columns type as understood by us
+	ColumnType map[string]string        // kind of columns type as understood by us (internal)
 
 	Drop     bool // drop table if already exists?
 	Truncate bool // truncate table before insert?
