@@ -66,7 +66,7 @@ Column mapping is defined in the CSV specific configuration file. Column mapping
 `format` mapping option is used to format a value from the CSV format to DB format. Possible patterns:
 
 | Usage | Description | Example|
-|---|---|---|---|
+|---|---|---|
 |decimal point|hint decimal point by simply assigning a number containing the CSV decimal point|`format = "1,2"` (hint that "," is the decimal point)|
 |date parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006"` (date format is dd.mm.yyyy)|
 |time parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006 15:04:05"` (date format is dd.mm.yyyy hh:mm:ss)|
