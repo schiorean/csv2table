@@ -43,8 +43,8 @@ type EmailTemplateContext struct {
 }
 
 const (
-	defaultSendOnSuccess = true
-	defaultSendOnError   = true
+	defaultSendOnSuccess = false
+	defaultSendOnError   = false
 )
 
 // subject templates

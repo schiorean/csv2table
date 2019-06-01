@@ -25,9 +25,9 @@ All configuration is manually defined in [`toml`](https://github.com/toml-lang/t
 
 If there is a file named `csv2table.toml` in the working directory (the directory where csv files are found) it is loaded as the first configuration file. You can skip using the global configuration file, its usage is when you have many CSV files that have some identical configuration options (e.g. the database credentials).
 
-#### 2) CSV file specifific configuration file
+#### 2) CSV specifific configuration file
 
-They have the same name as the csv file but with ".toml" extension. The configuration option defined in this files overwrite the configuration options defined in the global file.
+They have the same name as the csv file but with ".toml" extension. The purpose of the CSV configuration file is to define the column mapping. Besides column mapping you can also define global configuration options in which case they will overwrite the configuration options defined in the global file. 
 
 **ATTENTION**: The file specific configuration file is mandatory, otherwise the CSV file will not be imported.
 
@@ -43,8 +43,8 @@ Main configuration options:
 |`username`|database username||
 |`password`|database password||
 |`table`|table name|defaults to "sanitized" name of the CSV file|
-|`drop`|drop and recreate table before import (true|false)|false|
-|`truncate`|truncate table before import (true|false)|false|
+|`drop`|drop and recreate table before import (true/false)|false|
+|`truncate`|truncate table before import (true/false)|false|
 |`autoPk`|create an auto increment PK (int)|false|
 |`defaultColType`|default column definition|`VARCHAR(255) NULL DEFAULT NULL`|
 |`tableOptions`|table options when creating the table|`COLLATE='utf8_general_ci' ENGINE=InnoDB`|
@@ -54,11 +54,44 @@ Main configuration options:
 
 ### Column mapping
 
+Column mapping is defined in the CSV specific configuration file. Column mapping options:
 
+| Mapping option | Description | Example | Default value|
+|---|---|---|---|
+|`type`|column type|`type = "INT NULL DEFAULT NULL"`|defaults to global option `defaultColType`|
+|`index`|add column index (true/false)|`index = true`|false|
+|`nullIf`|set column to DB null if its value is one in the list|`nullIf = ["31.12.2999", ""]`||
+|`nullIfEmpty`|set column to DB null if its value is empty string|`nullIfEmpty = true`|false|
 
-Column mapping options:
+`format` mapping option is used to format a value from the CSV format to DB format. Possible patterns:
+| Usage | Description | Example|
+|---|---|---|---|
+|decimal point|hint decimal point by simply assigning a number containing the CSV decimal point|`format = "1,2"` (hint that "," is the decimal point)|
+|date parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006"` (date format is dd.mm.yyyy)|
+|time parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006 15:04:05"` (date format is dd.mm.yyyy hh:mm:ss)|
 
+### Email notifications
 
+It's possible to enable email notifications through SMTP protocol. Example sending notifications when an error occurs, usig GMail SMTP.
+```toml
+[email]
+    sendOnSuccess = false # don't send email if everything ok
+    sendOnError = true # send if an error occurs
+    from = "me@gmail.com"
+    to = ["me@gmail.com"]
+    smtpServer = "smtp.gmail.com:587"
+[email.plainAuth]
+    identity = ""
+    username = "me@gmail.com"
+    password = "gmail_secret"
+    host = "smtp.gmail.com"
+```
+
+TODO documentation: It's possible to overwrite the default emails subject and body as as configuration options.
+
+### Full configuration example
+
+`csv2table.toml` global configuration
 ```toml
 host = "localhost"
 port = 3306
@@ -85,6 +118,21 @@ bulkInsertSize = 15000
     username = "myself@gmail.com"
     password = "gmail_secret"
     host = "smtp.gmail.com"
+```
+`import.toml` configuration for a CSV file named `import.csv`
+```toml
+[mapping.No_ID]
+    type = "INT NULL DEFAULT NULL"
+[mapping.Reading]
+    type = "DOUBLE NULL DEFAULT NULL"
+    # format = "1,2" 
+[mapping.Reading_Date]
+    type = "DATE NULL DEFAULT NULL"
+    format = "02.01.2006"
+    nullIf = ["31.12.2999"]
+[mapping.Channel]
+    nullIF = ["First", "Last"]
+    nullIfEmpty = true
 ```
 
 ## Planned features 
