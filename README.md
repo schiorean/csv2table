@@ -64,6 +64,7 @@ Column mapping is defined in the CSV specific configuration file. Column mapping
 |`nullIfEmpty`|set column to DB null if its value is empty string|`nullIfEmpty = true`|false|
 
 `format` mapping option is used to format a value from the CSV format to DB format. Possible patterns:
+
 | Usage | Description | Example|
 |---|---|---|---|
 |decimal point|hint decimal point by simply assigning a number containing the CSV decimal point|`format = "1,2"` (hint that "," is the decimal point)|
@@ -125,7 +126,7 @@ bulkInsertSize = 15000
     type = "INT NULL DEFAULT NULL"
 [mapping.Reading]
     type = "DOUBLE NULL DEFAULT NULL"
-    # format = "1,2" 
+    format = "1,2" 
 [mapping.Reading_Date]
     type = "DATE NULL DEFAULT NULL"
     format = "02.01.2006"
