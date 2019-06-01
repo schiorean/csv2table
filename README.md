@@ -12,9 +12,6 @@ There may be several columns that require special processing:
 * `amount`: convert from a specific locale (e.g. `12,5`) to the database locale (e.g. `12.5`)
 * `start_date`: a more complex example, this column can have 2 types of values: 1) `dd.mm.yyyy` specifying an exact date or 2) an integer `n` meaning the number of months from January 1st of current year. In the later case we must calculate the the exact date and save it in database. (NOTE: Such complex example will be possible only after integrating an embedded language. See "Planned features" section).
 
-## Usage
-
-
 ## Documentation
 
 ### Configuration files
@@ -124,6 +121,7 @@ bulkInsertSize = 15000
 ```toml
 [mapping.No_ID]
     type = "INT NULL DEFAULT NULL"
+    index = true
 [mapping.Reading]
     type = "DOUBLE NULL DEFAULT NULL"
     format = "1,2" 
