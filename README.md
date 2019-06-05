@@ -175,5 +175,9 @@ bulkInsertSize = 15000
     nullIfEmpty = true
 ```
 
+And result in database
+
+![result](https://raw.githubusercontent.com/schiorean/csv2table/master/doc/sample_import_result.png)
+
 ## Planned features 
 1. Integrate an embedded language to allow complex culomn parsing. Candidates: Tengo, Lua.
