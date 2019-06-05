@@ -58,7 +58,7 @@ Main configuration options:
 |`tableOptions`|table options when creating the table|`COLLATE='utf8_general_ci' ENGINE=InnoDB`|
 |`bulkInsertSize`|how many rows to insert at once|10000|
 |`verbose`|verbosity to console|false|
-|`email`|a section where email||
+|`email`|a section where email notifications cand be configured, see "Email notifications" section||
 
 
 ### Column mapping
@@ -111,7 +111,23 @@ It's possible to enable email notifications through SMTP protocol. Example sendi
 
 TODO documentation: It's possible to overwrite the default emails subject and body as as configuration options.
 
-### Full configuration example
+### Full example
+
+`sample_import.csv` file to be imported
+```csv
+No ID;Reading;Reading_Date;Channel
+1;2,5;02.05.2014;X
+2;2,5;02.05.2014;X
+3;2,5;02.05.2014;First
+4;2,5;02.05.2014;X
+5;2,5;02.05.2014;Last
+6;2,5;07.05.2014;X
+7;2,5;17.07.2014;X
+8;2,5;23.07.2014;X
+9;2,5;28.07.2014;X
+10;2,5;17.03.2015;X
+11;2,5;01.02.2016;
+```
 
 `csv2table.toml` global configuration
 ```toml
@@ -131,7 +147,7 @@ bulkInsertSize = 15000
 # email 
 [email]
     sendOnSuccess = false
-    sendOnError = true
+    sendOnError = true # send email notification on error
     from = "myself@gmail.com"
     to = ["myself@gmail.com"]
     smtpServer = "smtp.gmail.com:587"
@@ -141,7 +157,8 @@ bulkInsertSize = 15000
     password = "gmail_secret"
     host = "smtp.gmail.com"
 ```
-`import.toml` configuration for a CSV file named `import.csv`
+
+`sample_import.toml` - file configuration
 ```toml
 [mapping.no_id]
     type = "INT NULL DEFAULT NULL"
@@ -154,7 +171,7 @@ bulkInsertSize = 15000
     format = "02.01.2006"
     nullIf = ["31.12.2999"]
 [mapping.channel]
-    nullIF = ["First", "Last"]
+    nullIF = ["Last"]
     nullIfEmpty = true
 ```
 
