@@ -39,7 +39,7 @@ func replacer() *strings.Replacer {
 			")", "",
 			"(", "",
 
-			// and replace some charcters with usable form for a db name
+			// and replace some characters with usable form for a db name
 			" ", "_",
 			"-", "_",
 		}

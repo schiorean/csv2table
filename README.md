@@ -1,6 +1,6 @@
 # csv2table
 
-A flexible command line tool to automate parsing and importing of CSV files into database tables. Currently the only database supported is MySQL.
+A fast and flexible command line tool to automate parsing and importing of CSV files into database tables. Currently the only database supported is MySQL.
 
 ## Use case 
 
@@ -13,6 +13,17 @@ There may be several columns that require special processing:
 * `start_date`: a more complex example, this column can have 2 types of values: 1) `dd.mm.yyyy` specifying an exact date or 2) an integer `n` meaning the number of months from January 1st of current year. In the later case we must calculate the the exact date and save it in database. (NOTE: Such complex example will be possible only after integrating an embedded language. See "Planned features" section).
 
 ## Documentation
+
+### Table and column names transformations
+
+Table and column names are sanitized and transformed before creating the corresponding database table. The following rules apply:
+* white space is trimmed
+* inner white space and `-` are replaced with `_`
+* special characters that can be part of the CSV header but can't be part of a database name are removed: `<,>,/,\,(,)`
+* "umlaut" characters are replaced by their normal counterparts (e.g. `ä` or `á` is replaced by `a`)
+* and finally all names are lower cased.
+
+Example: A CSV column named `Date of Receipt` will be saved in database as `date_of_receipt`.
 
 ### Configuration files
 
@@ -49,9 +60,14 @@ Main configuration options:
 |`verbose`|verbosity to console|false|
 |`email`|a section where email||
 
+
 ### Column mapping
 
-Column mapping is defined in the CSV specific configuration file. Column mapping options:
+Column mapping is defined in the CSV specific configuration file. Mapping options for each column are grouped under a `mapping.column_name` table. If we take the example from the "Use case" section, mapping options for column `expire_date` will be grouped under `mapping.expire_date` table.
+
+Note: the name of the column is the database column name (see "Table and column names transformations" section).
+
+Column mapping options:
 
 | Mapping option | Description | Example | Default value|
 |---|---|---|---|
@@ -67,6 +83,14 @@ Column mapping is defined in the CSV specific configuration file. Column mapping
 |decimal point|hint decimal point by simply assigning a number containing the CSV decimal point|`format = "1,2"` (hint that "," is the decimal point)|
 |date parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006"` (date format is dd.mm.yyyy)|
 |time parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006 15:04:05"` (date format is dd.mm.yyyy hh:mm:ss)|
+
+Mapping options example for column `expire_date`:
+```toml
+[mapping.expire_date]
+    type = "DATE NULL DEFAULT NULL"
+    format = "02.01.2006"
+    index = true
+```
 
 ### Email notifications
 
@@ -119,17 +143,17 @@ bulkInsertSize = 15000
 ```
 `import.toml` configuration for a CSV file named `import.csv`
 ```toml
-[mapping.No_ID]
+[mapping.no_id]
     type = "INT NULL DEFAULT NULL"
     index = true
-[mapping.Reading]
+[mapping.reading]
     type = "DOUBLE NULL DEFAULT NULL"
     format = "1,2" 
-[mapping.Reading_Date]
+[mapping.reading_date]
     type = "DATE NULL DEFAULT NULL"
     format = "02.01.2006"
     nullIf = ["31.12.2999"]
-[mapping.Channel]
+[mapping.channel]
     nullIF = ["First", "Last"]
     nullIfEmpty = true
 ```
