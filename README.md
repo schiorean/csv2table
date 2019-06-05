@@ -158,7 +158,7 @@ bulkInsertSize = 15000
     host = "smtp.gmail.com"
 ```
 
-`sample_import.toml` - file configuration
+`sample_import.toml` file configuration
 ```toml
 [mapping.no_id]
     type = "INT NULL DEFAULT NULL"
