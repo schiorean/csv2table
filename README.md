@@ -4,7 +4,7 @@ A fast and flexible command line tool to automate parsing and importing of CSV f
 
 ## Use case 
 
-Every night you have to fetch a set of CSV files from a remote SFTP server and import each file into a local mysql table. If the destination table doesn't exist, automatically create it.
+Every night you have to fetch a set of CSV files from a remote SFTP server and import each file into a corresponding mysql table. If the destination table doesn't exist, automatically create it.
 
 There may be several columns that require special processing:
 * `expire_date`: normal values are sent as `dd.mm.yyyy`, but there is a special value that signifies that there's no upper limit in time, `31.12.2099`. This value must be saved as a database `NULL` value
@@ -19,7 +19,7 @@ There may be several columns that require special processing:
 Table and column names are sanitized and transformed before creating the corresponding database table. The following rules apply:
 * white space is trimmed
 * inner white space and `-` are replaced with `_`
-* special characters that can be part of the CSV header but can't be part of a database name are removed: `<,>,/,\,(,)`
+* special characters that can be part of the CSV header but can't be part of a database name are removed: `<>/\()`
 * "umlaut" characters are replaced by their normal counterparts (e.g. `ä` or `á` is replaced by `a`)
 * and finally all names are lower cased.
 
@@ -31,11 +31,11 @@ All configuration is manually defined in [`toml`](https://github.com/toml-lang/t
 
 #### 1) Global configuration file `csv2table.toml`
 
-If there is a file named `csv2table.toml` in the working directory (the directory where csv files are found) it is loaded as the first configuration file. You can skip using the global configuration file, its usage is when you have many CSV files that have some identical configuration options (e.g. the database credentials).
+If there is a file named `csv2table.toml` in the working directory (the directory where csv files are found) it is loaded as the first configuration file. You can skip using the global configuration file, its common usage is when you have many CSV files that share identical configuration options (e.g. the database credentials).
 
 #### 2) CSV specifific configuration file
 
-They have the same name as the csv file but with ".toml" extension. The purpose of the CSV configuration file is to define the column mapping. Besides column mapping you can also define global configuration options in which case they will overwrite the configuration options defined in the global file. 
+They have the same name as the csv file but with ".toml" extension. The main purpose of the CSV configuration file is to define the column mapping. Besides column mapping you can also define global configuration options in which case they will overwrite the configuration options defined in the global file. 
 
 **ATTENTION**: The file specific configuration file is mandatory, otherwise the CSV file will not be imported.
 
@@ -82,9 +82,9 @@ Column mapping options:
 |---|---|---|
 |decimal point|hint decimal point by simply assigning a number containing the CSV decimal point|`format = "1,2"` (hint that "," is the decimal point)|
 |date parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006"` (date format is dd.mm.yyyy)|
-|time parsing|parse a date using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006 15:04:05"` (date format is dd.mm.yyyy hh:mm:ss)|
+|time parsing|parse a date/time using "Go" language [date and time pattern matching](https://yourbasic.org/golang/format-parse-string-time-date-example/#basic-time-format-example) |`format = "02.01.2006 15:04:05"` (date format is dd.mm.yyyy hh:mm:ss)|
 
-Mapping options example for column `expire_date`:
+Example of mapping options for column `expire_date`:
 ```toml
 [mapping.expire_date]
     type = "DATE NULL DEFAULT NULL"
