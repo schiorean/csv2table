@@ -181,3 +181,7 @@ And result in database
 
 ## Planned features 
 1. Integrate an embedded language to allow complex culomn parsing. Candidates: Tengo, Lua.
+
+## License
+
+This project is licensed under the terms of the MIT license.
